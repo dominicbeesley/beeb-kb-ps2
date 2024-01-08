@@ -8,42 +8,48 @@
 #include "ps2comm.h"
 
 
+//PS/2 connector - keyboard
+#define GPIO_PS2KB_DAT_PIN  0
+#define GPIO_PS2KB_CLK_PIN  1
+//PS/2 connector - mouse
+#define GPIO_PS2MS_DAT_PIN  21
+#define GPIO_PS2MS_CLK_PIN  22
 
-//PS2 keyboard
-//PA7-out on KeyJam
-#define GPIO_PS2KB_DAT_PIN  22
-//CA2-out on KeyJam
-#define GPIO_PS2KB_CLK_PIN  16
+//AMX connector
+#define GPIO_AMX_BTN_L      18
+#define GPIO_AMX_BTN_M      17
+#define GPIO_AMX_BTN_R      16
+#define GPIO_AMX_X1         27
+#define GPIO_AMX_X2         20
+#define GPIO_AMX_Y1         26
+#define GPIO_AMX_Y2         19
+
 
 #define GPIO_CA2_IN_PIN     4
 #define GPIO_KB_EN_PIN      13
 #define GPIO_1MHZ_PIN       14
 #define GPIO_PA7_IN_PIN     28
 
-#define GPIO_PA3_IN_PIN     6
-#define GPIO_PA4_IN_PIN     12
-#define GPIO_PA5_IN_PIN     11
-#define GPIO_PA6_IN_PIN     10
-#define GPIO_PA0_IN_PIN     9
-#define GPIO_PA1_IN_PIN     8
-#define GPIO_PA2_IN_PIN     7
+#define GPIO_PA0_OUT_PIN    9
+#define GPIO_PA1_OUT_PIN    8
+#define GPIO_PA2_OUT_PIN    7
+#define GPIO_PA3_OUT_PIN    6
+#define GPIO_PA4_OUT_PIN    12
+#define GPIO_PA5_OUT_PIN    11
+#define GPIO_PA6_OUT_PIN    10
 
 #define GPIO_LED1_PIN       3
 #define GPIO_LED2_PIN       2
 #define GPIO_LED3_PIN       5
 
-#define GPIO_RST_IN_SPEC    21
-
-//Keyjam board unusused
-#define GPIO_RELAY_PIN      17
-#define GPIO_RST_PIN        15
+#define GPIO_RST_IN         15
 
 
 //the set row, set col functions assume 1MHzE is low on entry
 void key_setrow(uint8_t r) {
-    gpio_put(GPIO_PA4_IN_PIN, r & 1);
-    gpio_put(GPIO_PA5_IN_PIN, r & 2);
-    gpio_put(GPIO_PA6_IN_PIN, r & 4);
+    gpio_put(GPIO_PA4_OUT_PIN, r & 1);
+    gpio_put(GPIO_PA5_OUT_PIN, r & 2);
+    gpio_put(GPIO_PA6_OUT_PIN, r & 4);
     sleep_us(1);
     gpio_put(GPIO_1MHZ_PIN, 1);
     sleep_us(1);
@@ -51,10 +57,10 @@ void key_setrow(uint8_t r) {
 }
 
 void key_setcol(uint8_t c) {
-    gpio_put(GPIO_PA0_IN_PIN, c & 1);
-    gpio_put(GPIO_PA1_IN_PIN, c & 2);
-    gpio_put(GPIO_PA2_IN_PIN, c & 4);
-    gpio_put(GPIO_PA3_IN_PIN, c & 8);
+    gpio_put(GPIO_PA0_OUT_PIN, c & 1);
+    gpio_put(GPIO_PA1_OUT_PIN, c & 2);
+    gpio_put(GPIO_PA2_OUT_PIN, c & 4);
+    gpio_put(GPIO_PA3_OUT_PIN, c & 8);
     sleep_us(1);
     gpio_put(GPIO_1MHZ_PIN, 1);
     sleep_us(1);
@@ -106,7 +112,7 @@ void key_scan(void) {
     }
 
     // handle reset separately
-    key_check(ix++, !gpio_get(GPIO_RST_IN_SPEC));
+    key_check(ix++, !gpio_get(GPIO_RST_IN));
 
 }
 
@@ -127,20 +133,20 @@ int main()
     gpio_set_dir(GPIO_LED3_PIN, GPIO_OUT);
 
     //row/col pins
-    gpio_init(GPIO_PA3_IN_PIN);
-    gpio_set_dir(GPIO_PA3_IN_PIN, GPIO_OUT);
-    gpio_init(GPIO_PA4_IN_PIN);
-    gpio_set_dir(GPIO_PA4_IN_PIN, GPIO_OUT);
-    gpio_init(GPIO_PA5_IN_PIN);
-    gpio_set_dir(GPIO_PA5_IN_PIN, GPIO_OUT);
-    gpio_init(GPIO_PA6_IN_PIN);
-    gpio_set_dir(GPIO_PA6_IN_PIN, GPIO_OUT);
-    gpio_init(GPIO_PA0_IN_PIN);
-    gpio_set_dir(GPIO_PA0_IN_PIN, GPIO_OUT);
-    gpio_init(GPIO_PA1_IN_PIN);
-    gpio_set_dir(GPIO_PA1_IN_PIN, GPIO_OUT);
-    gpio_init(GPIO_PA2_IN_PIN);
-    gpio_set_dir(GPIO_PA2_IN_PIN, GPIO_OUT);
+    gpio_init(GPIO_PA3_OUT_PIN);
+    gpio_set_dir(GPIO_PA3_OUT_PIN, GPIO_OUT);
+    gpio_init(GPIO_PA4_OUT_PIN);
+    gpio_set_dir(GPIO_PA4_OUT_PIN, GPIO_OUT);
+    gpio_init(GPIO_PA5_OUT_PIN);
+    gpio_set_dir(GPIO_PA5_OUT_PIN, GPIO_OUT);
+    gpio_init(GPIO_PA6_OUT_PIN);
+    gpio_set_dir(GPIO_PA6_OUT_PIN, GPIO_OUT);
+    gpio_init(GPIO_PA0_OUT_PIN);
+    gpio_set_dir(GPIO_PA0_OUT_PIN, GPIO_OUT);
+    gpio_init(GPIO_PA1_OUT_PIN);
+    gpio_set_dir(GPIO_PA1_OUT_PIN, GPIO_OUT);
+    gpio_init(GPIO_PA2_OUT_PIN);
+    gpio_set_dir(GPIO_PA2_OUT_PIN, GPIO_OUT);
 
     //control / sense pins
     gpio_init(GPIO_CA2_IN_PIN);
@@ -154,17 +160,9 @@ int main()
 
     gpio_put(GPIO_KB_EN_PIN, 0);
 
-    gpio_init(GPIO_RST_IN_SPEC);
-    gpio_set_pulls(GPIO_RST_IN_SPEC, 1, 0);
+    gpio_init(GPIO_RST_IN);
+    gpio_set_pulls(GPIO_RST_IN, 1, 0);
 
-
-    //extras to for KeyJam board
-    gpio_init(GPIO_RELAY_PIN);
-    gpio_set_dir(GPIO_RELAY_PIN, GPIO_OUT);
-    gpio_put(GPIO_RELAY_PIN,0);
-    gpio_init(GPIO_RST_PIN);
-    gpio_set_dir(GPIO_RST_PIN, GPIO_OUT);
-    gpio_put(GPIO_RST_PIN,0);
 
     puts("init...");
 
