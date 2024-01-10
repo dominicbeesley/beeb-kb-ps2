@@ -21,23 +21,6 @@
 // Timeout if computer not sending for 30ms
 #define TIMEOUT 30
 
-// The host was inhibiting a write - nothing was sent
-#define PS2C_ERR_INH -1
-
-// The host interrupted a write - the packet should be resent
-#define PS2C_ERR_INT -2
-
-// The host is requesting a read - data was held low, clock high
-#define PS2C_ERR_REQ -3
-
-// The host sent a bad packet - parity error
-#define PS2C_ERR_PAR -4
-
-// The host didn't send an expected response in time
-#define PS2C_ERR_TO -5
-
-// The host didn't send a stop bit
-#define PS2C_ERR_FE -6
 
 uint pin_clk;
 uint pin_dat;
@@ -159,10 +142,36 @@ int read(uint8_t *c) {
 	HI(pin_clk);
 	HI(pin_dat);
 
-	int i = (TIMEOUT * 1000) / CLKFULL;
-	while (gpio_get(pin_dat) && i > 0) { i --; }
-	if (i <0)
-		return PS2C_ERR_TO;
+	busy_wait_us(CLKFULL); // give time for pull ups
+
+	//we may have entered either expecting/wanting something from host
+	//or the host may already have pulled data/clock low
+
+	int i;
+
+	if (!gpio_get(pin_clk)) {
+		//clock already pulled low wait for it to be release and check data is low for start
+		while (!gpio_get(pin_clk)) {
+			busy_wait_us(CLKHALF);
+		}
+		if (gpio_get(pin_dat)) {
+			return PS2C_ERR_HFE;
+		}
+		// we've not had the start bit - start reading...
+	} else {
+		//we're expecting something but timeout if we don't get it
+		i = (TIMEOUT * 1000) / CLKFULL;
+		while (gpio_get(pin_clk) && i > 0) { i --; }
+		if (i <0)
+			return PS2C_ERR_TO;
+		if (gpio_get(pin_dat)) {
+			return PS2C_ERR_HFE;
+		}
+	}
+
+	busy_wait_us(CLKFULL);
+
+	printf("HOST:GO...\n");
 
 	*c = 0;
 	uint8_t par = 1;
@@ -175,13 +184,19 @@ int read(uint8_t *c) {
 	uint8_t b = readbit()?1:0;
 	par += b;
 
-	b = readbit()?1:0;
+	//stop
+	LO(pin_clk);
+	busy_wait_us(CLKFULL);
+	HI(pin_clk);
+	busy_wait_us(CLKFULL);
 
-	write_bit(0); //stop bit ack
+	// ack
+	SET(pin_dat, 0);
+	LO(pin_clk);	// start bit
+	busy_wait_us(CLKFULL);
+	HI(pin_clk);
 	HI(pin_dat);
 
-	if (!b)
-		return PS2C_ERR_FE;
 	if (par & 1)
 		return PS2C_ERR_PAR;
 	else
@@ -191,7 +206,7 @@ int read(uint8_t *c) {
 #define READ(x) \
 	r = read(&x); \
 	if (r) { \
-		printf("HRDER:%d\n", r); \
+		printf("HRDER:%d %02X\n", r, (int)x); \
 		return r; \
 	}
 
@@ -202,17 +217,12 @@ int ps2c_tick(void) {
 	HI(pin_clk);
 	HI(pin_dat);
 
+	busy_wait_us(CLKFULL); // give time for pull ups
+
 	if (gpio_get(pin_dat) && gpio_get(pin_clk))
 		return 0; // host not requesting anything
 
 	printf("HOST:REQ\n");
-	while (!gpio_get(pin_clk)) {
-		busy_wait_us(BYTEWAIT);
-	}
-
-	busy_wait_us(CLKFULL);
-
-	printf("HOST:GO...\n");
 
 	uint8_t c;
 	int r;
@@ -265,9 +275,10 @@ int ps2c_tick(void) {
 			printf("ECHO\n");
 			break;
 		case 0xED: // set LEDs
+			printf("LEDS:enter..wait\n");
 			write(0xFA); // ack
 			READ(d)
-			printf("LEDS: %d\n", (int)d);
+			printf("LEDS: %02x\n", (int)d);
 			leds = d;
 			break;
 		default:
@@ -280,14 +291,18 @@ int ps2c_tick(void) {
 
 int ps2c_keydown(uint16_t code) {
 	if (code & 0xFF00) {
-		write(code >> 8);
+		int r = write(code >> 8);
+		if (r)
+			return r;
 	}
 	return write(code);
 
 }
 int ps2c_keyup(uint16_t code) {
 	if (code & 0xFF00) {
-		write(code >> 8);
+		int r = write(code >> 8);
+		if (r)
+			return r;
 	}
 	int r = write(0xF0);
 	if (r) return r;

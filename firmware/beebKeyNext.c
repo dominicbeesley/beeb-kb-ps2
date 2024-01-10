@@ -79,8 +79,8 @@ void key_check(int ix, bool x) {
     if (x != ox) {
         uint16_t ps2 = getps2(ix);
         printf("%d => %02X\n", ix, (int)ps2);
+        int r = 0;
         if (ps2) {
-            int r;
             if (ox) {
                 r = ps2c_keyup(ps2);
                 printf("F0%04X\n", ps2);
@@ -92,9 +92,11 @@ void key_check(int ix, bool x) {
                 printf("ERR %d\n", r);
             }
         }
+        if (!r) {
+            keysdown[ix] = x;
+        }
     }
 
-    keysdown[ix] = x;
 }
 
 void key_scan(void) {
