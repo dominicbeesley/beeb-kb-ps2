@@ -179,9 +179,10 @@ int main()
 
         uint8_t i = ps2c_getleds();
            
-        gpio_put(GPIO_LED1_PIN, !(i & 1));
-        gpio_put(GPIO_LED2_PIN, !(i & 2));
-        gpio_put(GPIO_LED3_PIN, !(i & 4));
+        // translate between incoming byte order (CAPS = 2, SHIFT=1, MOTOR=0)
+        gpio_put(GPIO_LED1_PIN, (i & 2)?1:0);
+        gpio_put(GPIO_LED2_PIN, (i & 4)?1:0);
+        gpio_put(GPIO_LED3_PIN, (i & 1)?1:0);
 
     }
 
