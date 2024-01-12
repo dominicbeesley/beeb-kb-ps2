@@ -21,12 +21,12 @@ Note: You could optionally leave this chip in place and instead solder wires to 
 
 |Colour |Amiga  |AMX    |Atari  |TP8833 |Function
 |-------|-------|-------|-------|-------|------------------------------
-|Black  |   1   |   4   |       |  16   | Y2
+|Black  |   1   |  10   |       |  16   | Y2
 |White  |   6   |  16   |       |  12   | Left
-|Grey   |   2   |   2   |       |  13   | X1
+|Grey   |   2   |   6   |       |  13   | X1
 |Purple |   7   |   1   |       |  17   | 5V
-|Blue   |   3   |  10   |       |  15   | Y1
+|Blue   |   3   |   4   |       |  15   | Y1
 |Green  |   8   |  19   |       |   9   | Ground
-|Yellow |   4   |  12   |       |  14   | X2
+|Yellow |   4   |   2   |       |  14   | X2
 |Orange |   9   |  20   |       |  10   | Right
 |Red    |   5   |  18   |       |  11   | Middle
