@@ -118,8 +118,25 @@ void key_scan(void) {
 
 }
 
+
+volatile int mouseX, mouseY;
+
+void gpio_callback(uint gpio, uint32_t event_mask)
+{
+    if (gpio == GPIO_AMX_X1) {
+        mouseX += gpio_get(GPIO_AMX_X2)?-1:1;
+    } else if (gpio == GPIO_AMX_Y1) {
+        mouseY += gpio_get(GPIO_AMX_Y2)?-1:1;
+    }
+
+}
+
+
 int main()
 {
+    mouseX = 0;
+    mouseY = 0;
+
     stdio_init_all();
 
     // Pico LED
@@ -169,18 +186,28 @@ int main()
     // AMX mouse
     gpio_init(GPIO_AMX_BTN_L);
     gpio_set_dir(GPIO_AMX_BTN_L, GPIO_IN);
+    gpio_set_pulls(GPIO_AMX_BTN_L, true, false);
     gpio_init(GPIO_AMX_BTN_M);
     gpio_set_dir(GPIO_AMX_BTN_M, GPIO_IN);
+    gpio_set_pulls(GPIO_AMX_BTN_M, true, false);
     gpio_init(GPIO_AMX_BTN_R);
     gpio_set_dir(GPIO_AMX_BTN_R, GPIO_IN);
+    gpio_set_pulls(GPIO_AMX_BTN_R, true, false);
     gpio_init(GPIO_AMX_X1);
     gpio_set_dir(GPIO_AMX_X1, GPIO_IN);
+    gpio_set_pulls(GPIO_AMX_X1, true, false);
     gpio_init(GPIO_AMX_X2);
     gpio_set_dir(GPIO_AMX_X2, GPIO_IN);
+    gpio_set_pulls(GPIO_AMX_X2, true, false);
     gpio_init(GPIO_AMX_Y1);
     gpio_set_dir(GPIO_AMX_Y1, GPIO_IN);
+    gpio_set_pulls(GPIO_AMX_Y1, true, false);
     gpio_init(GPIO_AMX_Y2);
     gpio_set_dir(GPIO_AMX_Y2, GPIO_IN);
+    gpio_set_pulls(GPIO_AMX_Y2, true, false);
+
+    gpio_set_irq_enabled_with_callback(GPIO_AMX_X1, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
+    gpio_set_irq_enabled(GPIO_AMX_Y1, GPIO_IRQ_EDGE_RISE, true);
 
     puts("init...");
 
@@ -211,7 +238,16 @@ int main()
                 (gpio_get(GPIO_AMX_X2)?16:0) +
                 (gpio_get(GPIO_AMX_Y1)?32:0) +
                 (gpio_get(GPIO_AMX_Y2)?64:0);
-            printf("MOUSE %02X\n", (int)m);
+
+            int mX, mY;
+            uint32_t is = save_and_disable_interrupts();
+            mX = mouseX;
+            mouseX = 0;
+            mY = mouseY;
+            mouseY = 0;
+            restore_interrupts(is);
+
+            printf("MOUSE %02X %d x %d\n", (int)m, mX, mY);
         }
 
     }
