@@ -166,12 +166,29 @@ int main()
     gpio_set_pulls(GPIO_RST_IN, 1, 0);
 
 
+    // AMX mouse
+    gpio_init(GPIO_AMX_BTN_L);
+    gpio_set_dir(GPIO_AMX_BTN_L, GPIO_IN);
+    gpio_init(GPIO_AMX_BTN_M);
+    gpio_set_dir(GPIO_AMX_BTN_M, GPIO_IN);
+    gpio_init(GPIO_AMX_BTN_R);
+    gpio_set_dir(GPIO_AMX_BTN_R, GPIO_IN);
+    gpio_init(GPIO_AMX_X1);
+    gpio_set_dir(GPIO_AMX_X1, GPIO_IN);
+    gpio_init(GPIO_AMX_X2);
+    gpio_set_dir(GPIO_AMX_X2, GPIO_IN);
+    gpio_init(GPIO_AMX_Y1);
+    gpio_set_dir(GPIO_AMX_Y1, GPIO_IN);
+    gpio_init(GPIO_AMX_Y2);
+    gpio_set_dir(GPIO_AMX_Y2, GPIO_IN);
+
     puts("init...");
 
     key_init();
 
     ps2c_init(GPIO_PS2KB_CLK_PIN, GPIO_PS2KB_DAT_PIN);
 
+    uint8_t c;
     while (true) {
         sleep_ms(1);
 
@@ -183,6 +200,19 @@ int main()
         gpio_put(GPIO_LED1_PIN, (i & 2)?1:0);
         gpio_put(GPIO_LED2_PIN, (i & 4)?1:0);
         gpio_put(GPIO_LED3_PIN, (i & 1)?1:0);
+
+        c--;
+        if (c == 0) {
+            uint8_t m = 
+                (gpio_get(GPIO_AMX_BTN_L)?1:0) +
+                (gpio_get(GPIO_AMX_BTN_M)?2:0) +
+                (gpio_get(GPIO_AMX_BTN_R)?4:0) +
+                (gpio_get(GPIO_AMX_X1)?8:0) +
+                (gpio_get(GPIO_AMX_X2)?16:0) +
+                (gpio_get(GPIO_AMX_Y1)?32:0) +
+                (gpio_get(GPIO_AMX_Y2)?64:0);
+            printf("MOUSE %02X\n", (int)m);
+        }
 
     }
 
