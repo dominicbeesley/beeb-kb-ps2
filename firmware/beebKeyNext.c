@@ -44,6 +44,8 @@
 
 #define GPIO_RST_IN         15
 
+struct ps2c ps2_kb;
+uint8_t leds;
 
 //the set row, set col functions assume 1MHzE is low on entry
 void key_setrow(uint8_t r) {
@@ -74,48 +76,149 @@ void key_init() {
     memset((void *)keysdown, 0, 80);
 }
 
-void key_check(int ix, bool x) {
+uint32_t last_code;
+
+int keydown(uint16_t code) {    
+    last_code = code;
+    if (code & 0xFF00) {
+        int r = ps2c_write(&ps2_kb, code >> 8);
+        if (r)
+            return r;
+    }
+    return ps2c_write(&ps2_kb, code);
+
+}
+
+int keyup(uint16_t code) {
+    last_code = code | 0xFF0000;
+    if (code & 0xFF00) {
+        int r = ps2c_write(&ps2_kb, code >> 8);
+        if (r)
+            return r;
+    }
+    int r = ps2c_write(&ps2_kb, 0xF0);
+    if (r) return r;
+    return ps2c_write(&ps2_kb, code);
+}
+
+
+int key_check(int ix, bool x) {
+    int r = 0;
     uint8_t ox = keysdown[ix];
     if (x != ox) {
         uint16_t ps2 = getps2(ix);
         printf("%d => %02X\n", ix, (int)ps2);
-        int r = 0;
         if (ps2) {
             if (ox) {
-                r = ps2c_keyup(ps2);
+                r = keyup(ps2);
                 printf("F0%04X\n", ps2);
             } else {
-                r = ps2c_keydown(ps2);
+                r = keydown(ps2);
                 printf("%04X\n", ps2);
-            }
-            if (r) {
-                printf("ERR %d\n", r);
             }
         }
         if (!r) {
             keysdown[ix] = x;
         }
     }
+    if (r) 
+        printf("ERR %d\n", r);
+
+    return r;
 
 }
 
-void key_scan(void) {
+#define READ_KB(x) \
+    r = ps2c_read(&ps2_kb, &x); \
+    if (r) { \
+        printf("HRDER:%d %02X\n", r, (int)x); \
+        return r; \
+    }
 
-    ps2c_tick();  // check for commands back from host
+
+int key_scan(void) {
+
+    int r;
+    uint8_t cmd;
+    if (ps2c_tick(&ps2_kb, &cmd) == PS2C_ERR_REQ) {
+        // commands back from host in cmd
+        printf("HOST:REQ\n");
+
+        printf("HOST:%02X\n", (int)cmd);
+
+        uint8_t d;
+        switch (cmd) {
+            case 0xFF: //reset
+                ps2c_write(&ps2_kb, 0xFA);    //ack
+                ps2c_write(&ps2_kb, 0xAA);    //ack
+                leds = 0;
+                printf("RESET\n");
+                break;
+            case 0xFE: //resend last
+                if (last_code & 0xFF0000)
+                    keyup(last_code);
+                else
+                    keydown(last_code);
+                printf("RESEND: %08X\n", (int)last_code);
+                break;
+            case 0xF5: //disable
+                ps2c_write(&ps2_kb, 0xFA);    //ack
+                printf("DISABLE:\n");
+                break;
+            case 0xF4: //enable
+                ps2c_write(&ps2_kb, 0xFA);    //ack
+                printf("ENABLE:\n");
+                break;
+            case 0xF3: //repeat rate - do nothing with this
+                ps2c_write(&ps2_kb, 0xFA);    //acknowledge reset
+                READ_KB(d)
+                printf("TRATE: %d\n", (int)d);
+                break;
+            case 0xF2: //identify
+                ps2c_write(&ps2_kb, 0xFA);    //acknowledge reset
+                ps2c_write(&ps2_kb, 0xAB);
+                ps2c_write(&ps2_kb, 0x83);
+                printf("ID\n");
+                break;
+            case 0xF0: //read / set scan code set
+                ps2c_write(&ps2_kb, 0xFA);    //ack
+                READ_KB(d)
+                printf("SCAN: %d\n", (int)d);
+                if (!d)
+                    ps2c_write(&ps2_kb, 1);
+                break;
+            case 0xEE: //echo
+                ps2c_write(&ps2_kb, 0xEE);
+                printf("ECHO\n");
+                break;
+            case 0xED: // set LEDs
+                printf("LEDS:enter..wait\n");
+                ps2c_write(&ps2_kb, 0xFA); // ack
+                READ_KB(d)
+                printf("LEDS: %02x\n", (int)d);
+                leds = d;
+                break;
+            default:
+                printf("UK:%02X\n", (int)cmd);
+                break;
+        }
+    } 
 
     int ix = 0;
-    for (int r = 0; r <= 7; r++) {
-        key_setrow(r);        
-        for (int c = 0; c <= 9; c++) {
-            key_setcol(c);
+    for (int row = 0; row <= 7; row++) {
+        key_setrow(row);        
+        for (int col = 0; col <= 9; col++) {
+            key_setcol(col);
             sleep_us(10);
-            key_check(ix++, gpio_get(GPIO_PA7_IN_PIN));
+            r = key_check(ix++, gpio_get(GPIO_PA7_IN_PIN));
+            if (r)
+                return r;
         }
     }
 
     // handle reset separately
     key_check(ix++, !gpio_get(GPIO_RST_IN));
-
+    return 0;
 }
 
 
@@ -136,6 +239,7 @@ int main()
 {
     mouseX = 0;
     mouseY = 0;
+    leds = 0xFF;
 
     stdio_init_all();
 
@@ -213,20 +317,18 @@ int main()
 
     key_init();
 
-    ps2c_init(GPIO_PS2KB_CLK_PIN, GPIO_PS2KB_DAT_PIN);
+    ps2c_init(&ps2_kb, GPIO_PS2KB_CLK_PIN, GPIO_PS2KB_DAT_PIN);
 
     uint8_t c;
     while (true) {
         sleep_ms(1);
 
         key_scan();
-
-        uint8_t i = ps2c_getleds();
            
         // translate between incoming byte order (CAPS = 2, SHIFT=1, MOTOR=0)
-        gpio_put(GPIO_LED1_PIN, (i & 2)?1:0);
-        gpio_put(GPIO_LED2_PIN, (i & 4)?1:0);
-        gpio_put(GPIO_LED3_PIN, (i & 1)?1:0);
+        gpio_put(GPIO_LED1_PIN, (leds & 2)?1:0);
+        gpio_put(GPIO_LED2_PIN, (leds & 4)?1:0);
+        gpio_put(GPIO_LED3_PIN, (leds & 1)?1:0);
 
         c--;
         if (c == 0) {

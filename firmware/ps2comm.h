@@ -1,13 +1,18 @@
 #ifndef __PS2COMM_H__
 #define __PS2COMM_H__
 
-void ps2c_init(uint pin_clk, uint pin_dat);
+struct ps2c {
+	int pin_clk;
+	int pin_dat;
+};
+
+void ps2c_init(struct ps2c * p,uint _pin_clk, uint _pin_dat);
 
 // call this once per millisecond
-int ps2c_tick(void); 
+int ps2c_tick(struct ps2c *p, uint8_t *cmd); 
+int ps2c_write(struct ps2c *p, uint8_t data);
+int ps2c_read(struct ps2c *p, uint8_t *c);
 
-int ps2c_keydown(uint16_t code);
-int ps2c_keyup(uint16_t code);
 
 uint8_t ps2c_getleds(void);
 
