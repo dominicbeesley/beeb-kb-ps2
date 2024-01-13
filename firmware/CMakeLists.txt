@@ -18,7 +18,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(beebKeyNext beebKeyNext.c ps2keys.c ps2comm.c)
+add_executable(beebKeyNext beebKeyNext.c ps2keys.c ps2comm.c beeb-keyboard.c beeb-mouse.c)
 
 pico_set_program_name(beebKeyNext "beebKeyNext")
 pico_set_program_version(beebKeyNext "0.1")
