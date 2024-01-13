@@ -31,13 +31,28 @@ typedef enum {
 intelli_mode_t mode;
 intelli_unlock_t unlock;
 
+
+
 void gpio_callback(uint gpio, uint32_t event_mask)
 {
+	int d;
+
+	if (event_mask == GPIO_IRQ_EDGE_RISE) {
+		d = 1;
+	} else {
+		d = -1;
+	}
+
     if (gpio == GPIO_AMX_X1) {
-        mouseX += gpio_get(GPIO_AMX_X2)?-1:1;
+        mouseX += gpio_get(GPIO_AMX_X2)?-d:d;
     } else if (gpio == GPIO_AMX_Y1) {
-        mouseY += gpio_get(GPIO_AMX_Y2)?-1:1;
+        mouseY += gpio_get(GPIO_AMX_Y2)?-d:d;
+    } else if (gpio == GPIO_AMX_X2) {
+        mouseX += gpio_get(GPIO_AMX_X1)?d:-d;
+    } else if (gpio == GPIO_AMX_Y2) {
+        mouseY += gpio_get(GPIO_AMX_Y1)?d:-d;
     }
+
 
 }
 
@@ -83,8 +98,18 @@ void mouse_init(void) {
     gpio_set_dir(GPIO_AMX_Y2, GPIO_IN);
     gpio_set_pulls(GPIO_AMX_Y2, true, false);
 
-    gpio_set_irq_enabled_with_callback(GPIO_AMX_X1, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
-    gpio_set_irq_enabled(GPIO_AMX_Y1, GPIO_IRQ_EDGE_RISE, true);
+    gpio_set_irq_enabled_with_callback(GPIO_AMX_X1, 
+    	GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, 
+    	true, &gpio_callback);
+    gpio_set_irq_enabled(GPIO_AMX_Y1, 
+    	GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, 
+    	true);
+    gpio_set_irq_enabled_with_callback(GPIO_AMX_X2, 
+    	GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, 
+    	true, &gpio_callback);
+    gpio_set_irq_enabled(GPIO_AMX_Y2, 
+    	GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, 
+    	true);
 
     ps2c_init(&ps2_ms, GPIO_PS2MS_CLK_PIN, GPIO_PS2MS_DAT_PIN);
 
