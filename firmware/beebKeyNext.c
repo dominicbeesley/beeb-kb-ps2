@@ -9,6 +9,17 @@
 #include "beeb-mouse.h"
 #include "pins.h"
 
+//second core for dedicated mouse action
+void core_mouse(void) {
+
+    mouse_init();
+    while (true) {
+        sleep_ms(1);
+        mouse_scan();
+    }
+
+}
+
 int main()
 {
 
@@ -17,18 +28,15 @@ int main()
     puts("init...");
 
     key_init();
-    mouse_init();
+    multicore_launch_core1(&core_mouse);
+    
 
     puts("scan...");
 
     while (true) {
         sleep_ms(1);
 
-        key_scan();
-
-        mouse_scan();
-           
-
+        key_scan();       
     }
 
     return 0;

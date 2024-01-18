@@ -255,7 +255,7 @@ int mouse_scan(void) {
 
 	    if (b != last_b || mX || mY) {
 
-	        printf("MOUSE %02X %d x %d\n", (int)b, mX, mY);
+	        //printf("MOUSE %02X %d x %d\n", (int)b, mX, mY);
 			
 			if (stream_enabled)
 				send_packet(b, mX, mY);
