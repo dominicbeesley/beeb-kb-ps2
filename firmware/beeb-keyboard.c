@@ -12,6 +12,8 @@ uint8_t leds;
 uint32_t last_code;
 bool keysdown[81]; //81st key is reset
 
+static void key_reset(void);
+
 //the set row, set col functions assume 1MHzE is low on entry
 static void key_setrow(uint8_t r) {
     gpio_put(GPIO_PA4_OUT_PIN, r & 1);
@@ -87,9 +89,6 @@ void key_init() {
 
     ps2c_init(&ps2_kb, GPIO_PS2KB_CLK_PIN, GPIO_PS2KB_DAT_PIN);
 
-    memset((void *)keysdown, 0, 80);
-    leds = 0xFF;
-    key_show_leds();
 }
 
 
@@ -150,6 +149,21 @@ static int key_check(int ix, bool x) {
         return r; \
     }
 
+static void key_reset(void) {
+
+    memset((void *)keysdown, 0, 80);
+
+    leds = 0xFF;
+    key_show_leds();
+
+    sleep_ms(500);
+
+    ps2c_write(&ps2_kb, 0xAA);    //ack
+    leds = 0x00;
+    key_show_leds();
+    printf("RESET\n");
+
+}
 
 int key_scan(void) {
 
@@ -165,15 +179,13 @@ int key_scan(void) {
         switch (cmd) {
             case 0xFF: //reset
                 ps2c_write(&ps2_kb, 0xFA);    //ack
-                ps2c_write(&ps2_kb, 0xAA);    //ack
-                leds = 0;
-                printf("RESET\n");
+                key_reset();
                 break;
             case 0xFE: //resend last
-                if (last_code & 0xFF0000)
-                    keyup(last_code);
-                else
-                    keydown(last_code);
+//                if (last_code & 0xFF0000)
+//                    keyup(last_code);
+//                else
+//                    keydown(last_code);
                 printf("RESEND: %08X\n", (int)last_code);
                 break;
             case 0xF5: //disable
@@ -217,6 +229,7 @@ int key_scan(void) {
 
                 break;
             default:
+                ps2c_write(&ps2_kb, 0xFE); //resend please
                 printf("UK:%02X\n", (int)cmd);
                 break;
         }
@@ -230,11 +243,18 @@ int key_scan(void) {
             sleep_us(10);
             r = key_check(ix++, gpio_get(GPIO_PA7_IN_PIN));
             if (r)
-                return r;
+                goto end;
         }
     }
 
     // handle reset separately
-    key_check(ix++, !gpio_get(GPIO_RST_IN));
-    return 0;
+    r = key_check(ix++, !gpio_get(GPIO_RST_IN));
+
+end:
+
+    if (r) {
+        printf("SCAN:END:ERR:%d\n", r);
+    }
+
+    return r;
 }

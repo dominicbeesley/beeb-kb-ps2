@@ -72,28 +72,19 @@ int ps2c_write_bit(struct ps2c *p, uint8_t b) {
 
 int ps2c_write(struct ps2c *p, uint8_t data) {
 
+	HI(p->pin_dat);
+	HI(p->pin_clk);
+
 	busy_wait_us(CLKHALF);
 
 	// check for clock being held low by host
 
-	if (!gpio_get(p->pin_clk))
-		return PS2C_ERR_INH;
-
-	// check for data being held low by host
-	if (!gpio_get(p->pin_dat))
-		return PS2C_ERR_REQ;
-
-	busy_wait_us(BYTEWAIT);
-
-	// check for clock being held low by host
-
-	if (!gpio_get(p->pin_clk))
-		return PS2C_ERR_INH;
-
-	// check for data being held low by host
-	if (!gpio_get(p->pin_dat))
-		return PS2C_ERR_REQ;
-
+	while (!gpio_get(p->pin_clk)) {
+		// check for data being held low by host
+		if (!gpio_get(p->pin_dat))
+			return PS2C_ERR_REQ;
+		busy_wait_us(BYTEWAIT);
+	}
 	
 	int r;
 	r = ps2c_write_bit(p, 0);	// send start bit
@@ -150,7 +141,7 @@ int ps2c_read(struct ps2c *p, uint8_t *c) {
 			return PS2C_ERR_HFE;
 		}
 		// we've not had the start bit - start reading...
-	} else {
+	} else if (gpio_get(p->pin_dat)) {
 		//we're expecting something but timeout if we don't get it
 		i = (TIMEOUT * 1000) / CLKFULL;
 		while (gpio_get(p->pin_clk) && i > 0) { i --; }

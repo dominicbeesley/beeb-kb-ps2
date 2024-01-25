@@ -28,8 +28,8 @@ int main()
     puts("init...");
 
     key_init();
+
     multicore_launch_core1(&core_mouse);
-    
 
     puts("scan...");
 
