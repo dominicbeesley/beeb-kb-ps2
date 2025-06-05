@@ -154,7 +154,7 @@ int ps2c_read(struct ps2c *p, uint8_t *c) {
 
 	busy_wait_us(CLKFULL);
 
-	printf("HOST:GO...\n");
+	DBUG(printf("HOST:GO...\n"));
 
 	*c = 0;
 	uint8_t par = 1;
@@ -200,7 +200,7 @@ int ps2c_tick(struct ps2c *p, uint8_t *cmd) {
 
 	int r = ps2c_read(p, cmd);
     if (r) { 
-        printf("TICK ERR:%d %02X\n", r, (int)*cmd); 
+        DBUG(printf("TICK ERR:%d %02X\n", r, (int)*cmd)); 
         return r; 
     }
 	

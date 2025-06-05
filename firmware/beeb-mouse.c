@@ -148,14 +148,14 @@ static void send_packet(uint8_t buttons, int mX, int mY) {
 #define READ(x) \
     r = ps2c_read(&ps2_ms, &x); \
     if (r) { \
-        printf("MS EER RD:%d %02X\n", r, (int)x); \
+        DBUG(printf("MS EER RD:%d %02X\n", r, (int)x)); \
         return r; \
     }
 
 #define WRITE(x) \
     r = ps2c_write(&ps2_ms, x); \
     if (r) { \
-        printf("MS EER WR:%d %02X\n", r, (int)x); \
+        DBUG(printf("MS EER WR:%d %02X\n", r, (int)x)); \
         return r; \
     }
 
@@ -168,7 +168,7 @@ int mouse_scan(void) {
 
     if (ps2c_tick(&ps2_ms, &cmd) == PS2C_ERR_REQ) {
         uint8_t x;
-        printf("MOUSEREQ: %02X\n", cmd);
+        DBUG(printf("MOUSEREQ: %02X\n", cmd));
         intelli_unlock_t unlock_next = IM_U_IDLE;
         switch (cmd) {
         	case 0xFF:
@@ -211,7 +211,7 @@ int mouse_scan(void) {
 					mode = IM_03_SCROLL;
 
 				WRITE(0xFA);
-				printf("MS SAMPLERATE: %d (%d %d)\n", sample_rate, unlock_next, mode);
+				DBUG(printf("MS SAMPLERATE: %d (%d %d)\n", sample_rate, unlock_next, mode));
 				break;
 			case 0xF2:
 				WRITE(0xFA);
@@ -255,7 +255,7 @@ int mouse_scan(void) {
 
 	    if (b != last_b || mX || mY) {
 
-	        //printf("MOUSE %02X %d x %d\n", (int)b, mX, mY);
+	        //DBUG(printf("MOUSE %02X %d x %d\n", (int)b, mX, mY));
 			
 			if (stream_enabled)
 				send_packet(b, mX, mY);

@@ -2,6 +2,7 @@
 #include <string.h>
 #include "pico/stdlib.h"
 
+#include "debug.h"
 #include "ps2keys.h"
 #include "ps2comm.h"
 #include "beeb-keyboard.h"
@@ -121,14 +122,14 @@ static int key_check(int ix, bool x) {
     uint8_t ox = keysdown[ix];
     if (x != ox) {
         uint16_t ps2 = getps2(ix);
-        printf("%d => %02X\n", ix, (int)ps2);
+        DBUG(printf("%d => %02X\n", ix, (int)ps2));
         if (ps2) {
             if (ox) {
                 r = keyup(ps2);
-                printf("F0%04X\n", ps2);
+                DBUG(printf("F0%04X\n", ps2));
             } else {
                 r = keydown(ps2);
-                printf("%04X\n", ps2);
+                DBUG(printf("%04X\n", ps2));
             }
         }
         if (!r) {
@@ -136,7 +137,7 @@ static int key_check(int ix, bool x) {
         }
     }
     if (r) 
-        printf("ERR %d\n", r);
+        DBUG(printf("ERR %d\n", r));
 
     return r;
 
@@ -145,7 +146,7 @@ static int key_check(int ix, bool x) {
 #define READ_KB(x) \
     r = ps2c_read(&ps2_kb, &x); \
     if (r) { \
-        printf("HRDER:%d %02X\n", r, (int)x); \
+        DBUG(printf("HRDER:%d %02X\n", r, (int)x)); \
         return r; \
     }
 
@@ -161,7 +162,7 @@ static void key_reset(void) {
     ps2c_write(&ps2_kb, 0xAA);    //ack
     leds = 0x00;
     key_show_leds();
-    printf("RESET\n");
+    DBUG(printf("RESET\n"));
 
 }
 
@@ -171,9 +172,9 @@ int key_scan(void) {
     uint8_t cmd;
     if (ps2c_tick(&ps2_kb, &cmd) == PS2C_ERR_REQ) {
         // commands back from host in cmd
-        printf("HOST:REQ\n");
+        DBUG(printf("HOST:REQ\n"))
 
-        printf("HOST:%02X\n", (int)cmd);
+        DBUG(printf("HOST:%02X\n", (int)cmd));
 
         uint8_t d;
         switch (cmd) {
@@ -186,43 +187,43 @@ int key_scan(void) {
 //                    keyup(last_code);
 //                else
 //                    keydown(last_code);
-                printf("RESEND: %08X\n", (int)last_code);
+                DBUG(printf("RESEND: %08X\n", (int)last_code));
                 break;
             case 0xF5: //disable
                 ps2c_write(&ps2_kb, 0xFA);    //ack
-                printf("DISABLE:\n");
+                DBUG(printf("DISABLE:\n"));
                 break;
             case 0xF4: //enable
                 ps2c_write(&ps2_kb, 0xFA);    //ack
-                printf("ENABLE:\n");
+                DBUG(printf("ENABLE:\n"));
                 break;
             case 0xF3: //repeat rate - do nothing with this
                 ps2c_write(&ps2_kb, 0xFA);    //acknowledge reset
                 READ_KB(d)
-                printf("TRATE: %d\n", (int)d);
+                DBUG(printf("TRATE: %d\n", (int)d));
                 break;
             case 0xF2: //identify
                 ps2c_write(&ps2_kb, 0xFA);    //acknowledge reset
                 ps2c_write(&ps2_kb, 0xAB);
                 ps2c_write(&ps2_kb, 0x83);
-                printf("ID\n");
+                DBUG(printf("ID\n"));
                 break;
             case 0xF0: //read / set scan code set
                 ps2c_write(&ps2_kb, 0xFA);    //ack
                 READ_KB(d)
-                printf("SCAN: %d\n", (int)d);
+                DBUG(printf("SCAN: %d\n", (int)d));
                 if (!d)
                     ps2c_write(&ps2_kb, 1);
                 break;
             case 0xEE: //echo
                 ps2c_write(&ps2_kb, 0xEE);
-                printf("ECHO\n");
+                DBUG(printf("ECHO\n"));
                 break;
             case 0xED: // set LEDs
-                printf("LEDS:enter..wait\n");
+                DBUG(printf("LEDS:enter..wait\n"));
                 ps2c_write(&ps2_kb, 0xFA); // ack
                 READ_KB(d)
-                printf("LEDS: %02x\n", (int)d);
+                DBUG(printf("LEDS: %02x\n", (int)d));
                 leds = d;
 
                 key_show_leds();
@@ -230,7 +231,7 @@ int key_scan(void) {
                 break;
             default:
                 ps2c_write(&ps2_kb, 0xFE); //resend please
-                printf("UK:%02X\n", (int)cmd);
+                DBUG(printf("UK:%02X\n", (int)cmd));
                 break;
         }
     } 
@@ -253,7 +254,7 @@ int key_scan(void) {
 end:
 
     if (r) {
-        printf("SCAN:END:ERR:%d\n", r);
+        DBUG(printf("SCAN:END:ERR:%d\n", r));
     }
 
     return r;

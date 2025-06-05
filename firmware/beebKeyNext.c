@@ -5,6 +5,7 @@
 #include "hardware/timer.h"
 #include "pico/multicore.h"
 
+#include "debug.h"
 #include "beeb-keyboard.h"
 #include "beeb-mouse.h"
 #include "pins.h"
@@ -25,13 +26,13 @@ int main()
 
     stdio_init_all();
 
-    puts("init...");
+    DBUG(puts("init..."));
 
     key_init();
 
     multicore_launch_core1(&core_mouse);
 
-    puts("scan...");
+    DBUG(puts("scan..."));
 
     while (true) {
         sleep_ms(1);
