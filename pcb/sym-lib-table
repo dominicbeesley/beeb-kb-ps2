@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "RPI_Local")(type "KiCad")(uri "${KIPRJMOD}/RP-Pico Libraries/RPI_Local.kicad_sym")(options "")(descr ""))
+  (lib (name "DossyPS2")(type "KiCad")(uri "${KIPRJMOD}/Local/DossyPS2.kicad_sym")(options "")(descr ""))
+)
